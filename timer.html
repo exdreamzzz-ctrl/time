@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>专注计时</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { --bg: #1a1a2e; --accent: #e94560; --accent-dim: #c2314a; --text: #eaeaea; --text-dim: #8888aa; --green: #2ecc71; --amber: #f39c12; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; user-select: none; }
+  .fullscreen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: var(--bg); }
+  .top-bar { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 1.2rem 1.5rem; z-index: 10; }
+  .top-bar button { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; width: 2.8rem; height: 2.8rem; display: flex; align-items: center; justify-content: center; color: var(--text); font-size: 1.3rem; cursor: pointer; transition: background 0.2s, transform 0.15s; opacity: 0.6; line-height: 1; }
+  .top-bar button:hover { background: var(--accent); opacity: 1; transform: scale(1.08); }
+  .top-bar button:active { transform: scale(0.93); }
+  .top-bar .back-btn { border-radius: 10px; width: auto; padding: 0.4rem 0.9rem; font-size: 0.9rem; }
+  .top-bar .back-btn:hover { background: rgba(255,255,255,0.12); }
+  .top-bar .right-group { display: flex; gap: 0.5rem; align-items: center; }
+  .top-bar .right-group button { width: 2.8rem; height: 2.8rem; }
+  .top-bar .fs-btn { font-size: 1.1rem; }
+  .top-bar .fs-btn.active { background: rgba(46,204,113,0.2); border-color: rgba(46,204,113,0.3); color: var(--green); opacity: 0.9; }
+  .task-label { font-size: 1.3rem; color: var(--text-dim); margin-bottom: 0.8rem; text-align: center; max-width: 85vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task-label strong { color: var(--text); font-weight: 500; }
+  .time { font-size: clamp(8rem, 25vw, 22rem); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.06em; line-height: 1; transition: color 0.3s; }
+  .time.running { color: var(--accent); }
+  .time.paused { color: var(--amber); }
+  .hint { margin-top: 2rem; font-size: 1.1rem; color: var(--text-dim); opacity: 0.6; }
+  .finish-btn { margin-top: 3rem; background: var(--green); border: none; border-radius: 16px; padding: 0.9rem 2.8rem; font-size: 1.2rem; font-weight: 700; color: #fff; cursor: pointer; transition: background 0.2s, transform 0.15s; }
+  .finish-btn:hover { background: #27ae60; transform: scale(1.04); }
+  .finish-btn:active { transform: scale(0.96); }
+  .done-overlay { display: none; flex-direction: column; align-items: center; gap: 1rem; }
+  .done-overlay .check-icon { font-size: 4rem; color: var(--green); }
+  .done-overlay .done-time { font-size: 3.5rem; font-weight: 700; color: var(--green); font-variant-numeric: tabular-nums; }
+  .done-overlay .done-desc { font-size: 1rem; color: var(--text-dim); }
+  .done-overlay .done-btn { margin-top: 0.5rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 0.7rem 2rem; font-size: 1rem; color: var(--text); cursor: pointer; }
+  .done-overlay .done-btn:hover { background: rgba(255,255,255,0.14); }
+</style>
+</head><body>
+<div class="fullscreen" id="fullscreen">
+  <div class="top-bar">
+    <button class="back-btn" id="backBtn">&larr; 返回</button>
+    <div class="right-group">
+      <button class="fs-btn" id="fsBtn" title="全屏">&#x26F6;</button>
+    </div>
+  </div>
+  <div id="timerArea" style="display:flex;flex-direction:column;align-items:center;">
+    <div class="task-label" id="taskLabel"></div>
+    <div class="time running" id="timeDisplay">00:00</div>
+    <div class="hint" id="hint">点击屏幕暂停</div>
+    <button class="finish-btn" id="finishBtn">&#x2713; 完成计时</button>
+  </div>
+  <div class="done-overlay" id="doneOverlay">
+    <div class="check-icon">&#x2705;</div>
+    <div style="font-size:2rem;font-weight:700;color:var(--green);">计时完成！</div>
+    <div class="done-time" id="doneTimeDisplay">00:00</div>
+    <div class="done-desc" id="doneDesc">本次专注已计入学习时长</div>
+    <button class="done-btn" id="doneBackBtn">&larr; 返回任务页</button>
+  </div>
+</div>
+<script>
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var taskId   = params.get('taskId') || '';
+  var taskName = params.get('taskName') || '';
+  var fsBtn = document.getElementById('fsBtn');
+  var fullscreen  = document.getElementById('fullscreen');
+  var taskLabel   = document.getElementById('taskLabel');
+  var timeDisplay = document.getElementById('timeDisplay');
+  var hint        = document.getElementById('hint');
+  var backBtn     = document.getElementById('backBtn');
+  var timerArea   = document.getElementById('timerArea');
+  var doneOverlay = document.getElementById('doneOverlay');
+  var doneTimeDisplay = document.getElementById('doneTimeDisplay');
+  var doneDesc    = document.getElementById('doneDesc');
+  var doneBackBtn = document.getElementById('doneBackBtn');
+  var finishBtn   = document.getElementById('finishBtn');
+  var elapsed = 0, timerPaused = false, timerInterval = null, hasSavedResult = false, sessionStartTime = Date.now();
+  function fmt(sec) {
+    var h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+    if (h > 0) return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  }
+  function fmtDesc(sec) {
+    var h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60, parts = [];
+    if (h > 0) parts.push(h+'小时');
+    if (m > 0) parts.push(m+'分');
+    if (s > 0 || parts.length === 0) parts.push(s+'秒');
+    return parts.join('');
+  }
+  function e(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function u() { timeDisplay.textContent = fmt(elapsed); }
+  function st() {
+    sessionStartTime = Date.now();
+    timerInterval = setInterval(function() { if (!timerPaused) { elapsed++; u(); } }, 1000);
+  }
+  function sv() {
+    if (hasSavedResult || elapsed <= 0) return;
+    hasSavedResult = true;
+    localStorage.setItem('pomodoro_session_result', JSON.stringify({taskId:taskId, elapsedSec:elapsed, completedNaturally:true, timestamp:Date.now()}));
+    var d = new Date(sessionStartTime), ds = d.toISOString().slice(0,10), h = d.getHours(), ss = [];
+    try { var r = localStorage.getItem('pomodoro_sessions'); if (r) ss = JSON.parse(r); } catch(e) {}
+    ss.push({taskId:taskId, taskName:taskName, elapsedSec:elapsed, date:ds, hour:h, startTime:sessionStartTime});
+    localStorage.setItem('pomodoro_sessions', JSON.stringify(ss));
+  }
+  function gb() { sv(); window.location.href = 'index.html'; }
+  function sd() {
+    clearInterval(timerInterval); timerInterval = null; sv();
+    timerArea.style.display = 'none'; doneOverlay.style.display = 'flex';
+    doneTimeDisplay.textContent = fmt(elapsed);
+    doneDesc.textContent = '本次专注 '+fmtDesc(elapsed)+'，已计入学习时长';
+  }
+  fullscreen.addEventListener('click', function(e) {
+    if (e.target === backBtn || e.target === doneBackBtn || e.target === finishBtn || e.target === fsBtn) return;
+    if (doneOverlay.style.display === 'flex') return;
+    timerPaused = !timerPaused;
+    timeDisplay.className = timerPaused ? 'time paused' : 'time running';
+    hint.textContent = timerPaused ? '⏸ 已暂停，点击继续' : '点击屏幕暂停';
+  });
+  backBtn.addEventListener('click', function(e) { e.stopPropagation(); gb(); });
+  finishBtn.addEventListener('click', function(e) { e.stopPropagation(); sd(); });
+  doneBackBtn.addEventListener('click', function(e) { e.stopPropagation(); window.location.href = 'index.html'; });
+  function tfs() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen).call(document.documentElement).catch(function(){});
+      fsBtn.classList.add('active');
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document).catch(function(){});
+      fsBtn.classList.remove('active');
+    }
+  }
+  fsBtn.addEventListener('click', function(e) { e.stopPropagation(); tfs(); });
+  document.addEventListener('fullscreenchange', function() { fsBtn.classList.toggle('active', !!document.fullscreenElement); });
+  document.addEventListener('webkitfullscreenchange', function() { fsBtn.classList.toggle('active', !!document.webkitFullscreenElement); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && elapsed > 0) gb(); });
+  window.addEventListener('beforeunload', function() { if (!hasSavedResult && elapsed > 0) { localStorage.setItem('pomodoro_session_result', JSON.stringify({taskId:taskId, elapsedSec:elapsed, completedNaturally:false, timestamp:Date.now()})); } });
+  if (taskName) { taskLabel.innerHTML = '🎯 专注 &middot; <strong>'+e(taskName)+'</strong>'; } else { taskLabel.textContent = '🎯 专注计时'; }
+  st();
+})();
+</script>
+</body></html>
