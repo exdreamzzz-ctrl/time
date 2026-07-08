@@ -498,9 +498,9 @@
       });
       var data = await r.json();
       if (data && data.length > 0) {
-        var d = data[0]; var lu = localStorage.getItem('pomodoro_updated');
-        if (!lu || new Date(d.updated_at) > new Date(lu)) {
-          tasks = JSON.parse(d.tasks); totalSec = d.total_sec; todaySec = d.today_sec; return true;
+        var d = data[0]; var cTasks = typeof d.tasks === 'string' ? JSON.parse(d.tasks) : (d.tasks || []);
+        if (cTasks.length > 0 && (d.total_sec || 0) > 0) {
+          tasks = cTasks; totalSec = d.total_sec || 0; todaySec = d.today_sec || 0; return true;
         }
       }
     } catch(e) {}
@@ -542,8 +542,6 @@
         todaySec = d.date === today() ? (d.today || 0) : 0;
       }
     } catch(_) {}
-
-    await _fromCloud();
 
     try {
       const raw = localStorage.getItem(TASKS_KEY);
@@ -598,15 +596,20 @@
 
     // 检查是否有计时器回传的结果
     checkSessionResult();
+
+    // 从云端拉取数据（仅当本地没有数据时）
+    var hasLocalData = totalSec > 0 || tasks.length > 0;
+    if (!hasLocalData) await _fromCloud();
+
     renderStats();
     renderTasks();
   }
 
-  async function saveStats() {
+  function saveStats() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ total: totalSec, today: todaySec, date: today() }));
   }
 
-  async function saveTasks() {
+  function saveTasks() {
     localStorage.setItem(TASKS_KEY, JSON.stringify({ date: today(), tasks: tasks }));
     // 历史备份
     localStorage.setItem('pomodoro_tasks_' + today(), JSON.stringify({ tasks: tasks }));
