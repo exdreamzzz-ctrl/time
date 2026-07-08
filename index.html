@@ -485,7 +485,7 @@
     try {
       await fetch(_SUPABASE_URL, {
         method: 'POST',
-        headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY3lyYnZ3aG9pcWpsaGZrZ2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIwMDgsImV4cCI6MjA5OTAwODAwOH0.jZAhJ2sM_U935Fi6hmiBQJVf2rpld4XqFDm7xD5_NGY', 'Authorization': 'Bearer '+'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY3lyYnZ3aG9pcWpsaGZrZ2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIwMDgsImV4cCI6MjA5OTAwODAwOH0.jZAhJ2sM_U935Fi6hmiBQJVf2rpld4XqFDm7xD5_NGY', 'Content-Type': 'application/json' },
+        headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY3lyYnZ3aG9pcWpsaGZrZ2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIwMDgsImV4cCI6MjA5OTAwODAwOH0.jZAhJ2sM_U935Fi6hmiBQJVf2rpld4XqFDm7xD5_NGY', 'Authorization': 'Bearer '+'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY3lyYnZ3aG9pcWpsaGZrZ2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIwMDgsImV4cCI6MjA5OTAwODAwOH0.jZAhJ2sM_U935Fi6hmiBQJVf2rpld4XqFDm7xD5_NGY', 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
         body: JSON.stringify({ device_id: _did, date: today(), tasks: JSON.stringify(tasks), total_sec: totalSec, today_sec: todaySec, updated_at: new Date().toISOString() })
       });
       localStorage.setItem('pomodoro_updated', new Date().toISOString());
