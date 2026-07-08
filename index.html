@@ -407,7 +407,6 @@
 
 @media (max-width:640px){.panel{padding:1rem;border-radius:16px}.task-item{padding:.45rem .55rem}.task-item .act button{padding:.25rem .35rem;font-size:.65rem}.modal{padding:1rem}.history-modal{width:100%}}
 @media (max-width:480px){body{padding:.5rem}.panel{padding:.8rem;border-radius:12px}.task-item .tu{min-width:3rem;font-size:.85rem}.task-add-row input{font-size:.85rem;padding:.45rem .7rem}.task-add-row .btn-add{padding:.45rem 1rem;font-size:.85rem}.fab{flex-wrap:wrap;gap:.3rem}.fab button{font-size:.72rem;padding:.2rem .4rem}.fstats{gap:.5rem}.fs .fv{font-size:.8rem}.task-header .title{font-size:.9rem}.task-header .badge{font-size:.65rem}.modal-overlay{padding:.5rem}.modal{padding:.8rem}}</style>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -479,26 +478,30 @@
 
   // ========== DOM ==========
   const $ = id => document.getElementById(id);
-  const _SUPABASE_URL = 'https://vocyrbvwhoiqjlhfkgis.supabase.co';
-  const _SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY3lyYnZ3aG9pcWpsaGZrZ2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIwMDgsImV4cCI6MjA5OTAwODAwOH0.jZAhJ2sM_U935Fi6hmiBQJVf2rpld4XqFDm7xD5_NGY';
-  let _supa = null;
+  const _SUPABASE_URL = 'https://vocyrbvwhoiqjlhfkgis.supabase.co/rest/v1/tasks';
   let _did = localStorage.getItem('pomodoro_device_id');
   if (!_did) { _did = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); localStorage.setItem('pomodoro_device_id', _did); }
-  function _initSupa() { if (typeof supabase === 'undefined') return false; if (!_supa) _supa = supabase.createClient(_SUPABASE_URL, _SUPABASE_KEY); return true; }
   async function _toCloud() {
-    if (!_initSupa()) return;
     try {
-      await _supa.from('tasks').upsert({ device_id: _did, date: today(), tasks: JSON.stringify(tasks), total_sec: totalSec, today_sec: todaySec, updated_at: new Date().toISOString() }, { onConflict: 'device_id,date' });
-      var _se = document.getElementById('syncStatus'); if (_se) _se.textContent = '☁';
-    } catch(e) { var _se = document.getElementById('syncStatus'); if (_se) _se.textContent = '⚠'; }
+      await fetch(_SUPABASE_URL, {
+        method: 'POST',
+        headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY3lyYnZ3aG9pcWpsaGZrZ2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIwMDgsImV4cCI6MjA5OTAwODAwOH0.jZAhJ2sM_U935Fi6hmiBQJVf2rpld4XqFDm7xD5_NGY', 'Authorization': 'Bearer '+'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY3lyYnZ3aG9pcWpsaGZrZ2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIwMDgsImV4cCI6MjA5OTAwODAwOH0.jZAhJ2sM_U935Fi6hmiBQJVf2rpld4XqFDm7xD5_NGY', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: _did, date: today(), tasks: JSON.stringify(tasks), total_sec: totalSec, today_sec: todaySec, updated_at: new Date().toISOString() })
+      });
+      localStorage.setItem('pomodoro_updated', new Date().toISOString());
+    } catch(e) {}
   }
   async function _fromCloud() {
-    if (!_initSupa()) return false;
     try {
-      var dt = today(); var { data } = await _supa.from('tasks').select('*').eq('date', dt).order('updated_at', { ascending: false }).limit(1);
+      var r = await fetch(_SUPABASE_URL + '?date=eq.'+ today() + '&order=updated_at.desc&limit=1', {
+        headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY3lyYnZ3aG9pcWpsaGZrZ2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIwMDgsImV4cCI6MjA5OTAwODAwOH0.jZAhJ2sM_U935Fi6hmiBQJVf2rpld4XqFDm7xD5_NGY', 'Authorization': 'Bearer '+'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvY3lyYnZ3aG9pcWpsaGZrZ2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzIwMDgsImV4cCI6MjA5OTAwODAwOH0.jZAhJ2sM_U935Fi6hmiBQJVf2rpld4XqFDm7xD5_NGY' }
+      });
+      var data = await r.json();
       if (data && data.length > 0) {
-        var r = data[0]; var lu = localStorage.getItem('pomodoro_updated');
-        if (!lu || new Date(r.updated_at) > new Date(lu)) { tasks = JSON.parse(r.tasks); totalSec = r.total_sec; todaySec = r.today_sec; return true; }
+        var d = data[0]; var lu = localStorage.getItem('pomodoro_updated');
+        if (!lu || new Date(d.updated_at) > new Date(lu)) {
+          tasks = JSON.parse(d.tasks); totalSec = d.total_sec; todaySec = d.today_sec; return true;
+        }
       }
     } catch(e) {}
     return false;
