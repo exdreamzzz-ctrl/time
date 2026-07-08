@@ -34,7 +34,9 @@
   .done-overlay .done-desc { font-size: 1rem; color: var(--text-dim); }
   .done-overlay .done-btn { margin-top: 0.5rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 0.7rem 2rem; font-size: 1rem; color: var(--text); cursor: pointer; }
   .done-overlay .done-btn:hover { background: rgba(255,255,255,0.14); }
-</style>
+
+@media (max-width:640px){.time{font-size:clamp(5rem,20vw,16rem)}.finish-btn{padding:.7rem 2rem;font-size:1rem}}
+@media (max-width:480px){.top-bar{padding:.8rem 1rem}.task-label{font-size:1rem}.time{font-size:clamp(3.5rem,18vw,12rem)}.finish-btn{padding:.6rem 1.5rem;font-size:.9rem}.done-overlay .done-time{font-size:2.5rem}}</style>
 </head><body>
 <div class="fullscreen" id="fullscreen">
   <div class="top-bar">
